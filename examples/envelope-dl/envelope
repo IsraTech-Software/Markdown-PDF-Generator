@@ -159,7 +159,7 @@ REFERENCE_CSS: str = textwrap.dedent("""
         margin: auto;
         width: 20mm; 
         height: 20mm;
-        background-image: url('data:image/png;base64,[LOGO_BASE64]'); 
+        background-image: url('[LOGO_BASE64]'); 
         background-size: contain;
         background-position: left center;
         background-repeat: no-repeat;
