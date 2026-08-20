@@ -1,0 +1,74 @@
+@page {
+    size: A4;
+    /* Standard DIN 5008 margins approximately */
+    margin-top: 27mm;
+    margin-bottom: 20mm;
+    margin-left: 25mm;
+    margin-right: 20mm;
+    background-color: #ffffff;
+}
+
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #000000;
+}
+
+.sender-address {
+    font-size: 10pt;
+    margin-bottom: 16mm;
+}
+
+.receiver-address {
+    font-size: 11pt;
+    margin-bottom: 15mm;
+    margin-top: 5mm;
+}
+
+.date-container {
+    text-align: right;
+    margin-bottom: 10mm;
+}
+
+.subject {
+    font-weight: bold;
+    font-size: 12pt;
+    margin-bottom: 10mm;
+}
+
+.content {
+    text-align: justify;
+}
+
+.signature {
+    margin-top: 10mm;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+/* Can be used in reference-letters.  */
+.recommended-by {
+    display: block;
+    font-size: 10pt;
+    font-style: italic;
+    color: #333333;
+    margin-bottom: 5mm;
+}
+
+/* This is a removable watermark. */
+.watermark {
+    position: absolute;
+    top: 255mm; 
+    left: 0;
+    font-size: 10px !important;
+    color: #999999;
+    font-family: 'Courier New', Courier, monospace;
+    text-align: right;
+    letter-spacing: 0.5px;
+    margin: 0; 
+    padding: 0;
+}

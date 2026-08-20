@@ -1,0 +1,305 @@
+@page {
+    size: A4;
+    margin: 20mm 20mm 25mm 20mm;
+    background-color: #ffffff;
+
+    @bottom-left {
+        /*content: ""; TODO: Your custom text on lower right of page */
+        font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #7f8c8d;
+        border-top: 1px solid #eaeaea;
+        padding-top: 5px;
+    }
+
+    @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #7f8c8d;
+        border-top: 1px solid #eaeaea;
+        padding-top: 5px;
+    }
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333333;
+    font-size: 11pt;
+    line-height: 1.6;
+    background-color: #ffffff;
+    margin: 0;
+    padding: 0;
+}
+
+h1 {
+    background-color: #2b74cb; 
+    color: #ffffff;
+    margin-top: -25mm;
+    margin-left: -25mm; 
+    margin-right: -25mm;
+    margin-bottom: -1px; 
+    padding: 25mm 25mm 5px 25mm; 
+    font-size: 26pt;
+    font-weight: 700; 
+    text-align: left;
+    border: none;
+    letter-spacing: -0.3px;
+}
+
+h1 + p {
+    background-color: #2b74cb;
+    color: #ffffff;
+    margin-top: 0; 
+    margin-left: -25mm;
+    margin-right: -25mm;
+    margin-bottom: 15px; 
+    padding: 1px 25mm 15mm 25mm; 
+    font-size: 13pt;
+    font-weight: 400; 
+    border: none;
+}
+
+h2 {
+    color: #2b74cb;
+    font-size: 16pt;
+    font-weight: 700;
+    margin-top: 35px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #2b74cb;
+    padding-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+}
+
+h3 {
+    color: #2d3748;
+    font-size: 13pt;
+    font-weight: 600;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    page-break-after: avoid;
+}
+
+p {
+    margin-top: 0;
+    margin-bottom: 15px;
+    text-align: justify;
+}
+
+ul, ol {
+    margin-top: 10px;
+    margin-bottom: 20px;
+    padding-left: 30px;
+}
+
+li {
+    margin-bottom: 10px;
+}
+
+img[alt="Block Math"] {
+    height: auto !important; 
+    max-height: 3em;
+}
+
+blockquote {
+    margin: 20px 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    page-break-inside: avoid;
+}
+
+blockquote p, blockquote.info {
+    background-color: #f2f5f9;
+    border-left: 4px solid #2b74cb;
+    padding: 15px 20px;
+    margin: 0;
+    font-style: normal;
+    color: #2d3748;
+}
+
+blockquote.warning, blockquote.warning p {
+    background-color: #fffdf2;
+    border-left-color: #d4ac0d;
+}
+
+blockquote.error, blockquote.error p {
+    background-color: #fdebeb; 
+    border-left-color: #b8312f; 
+}
+
+blockquote strong {
+    color: #1a202c;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 10.5pt;
+    page-break-inside: avoid;
+}
+
+th {
+    background-color: #ebf8ff;
+    color: #2b74cb;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 2px solid #cbd5e0;
+}
+
+td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #4a5568;
+}
+
+tr:nth-child(even) {
+    background-color: #fcfcfc;
+}
+
+code {
+    font-family: 'Consolas', 'Courier New', monospace;
+    background-color: #edf2f7;
+    color: #c53030;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 9.5pt;
+}
+
+pre {
+    background-color: #f8f9fa;
+    color: #2c3e50;
+    padding: 15px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+}
+
+.header-card {
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+}
+
+.header-card h1 {
+    background-color: transparent;
+    color: #f8fafc;
+    margin: 0 0 6px 0;
+    padding: 0;
+    font-size: 15pt;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+
+.header-card p {
+    background-color: transparent;
+    color: #94a3b8;
+    margin: 0;
+    padding: 0;
+    font-size: 9pt;
+    line-height: 1.35;
+}
+
+.intro-box {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0284c7;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-bottom: 14px;
+    font-size: 10pt;
+    color: #334155;
+}
+
+.section-block {
+    margin-bottom: 12px;
+}
+
+.highlight-badge {
+    display: inline-block;
+    background-color: #e0f2fe;
+    color: #0369a1;
+    font-size: 8pt;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-left: 6px;
+    text-transform: uppercase;
+}
+
+.table-box {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 9.5pt;
+    page-break-inside: avoid;
+}
+
+.table-box th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1px solid #cbd5e1;
+    border-right: 1px solid #e2e8f0;
+}
+
+.table-box td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    border-right: 1px solid #e2e8f0;
+    vertical-align: top;
+    color: #334155;
+}
+
+.table-box tr:nth-child(even) td {
+    background-color: #f8fafc;
+}
+
+.phrase-box {
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-left: 4px solid #16a34a;
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-top: 10px;
+    page-break-inside: avoid;
+}
+
+.phrase-box h3 {
+    margin: 0 0 6px 0;
+    font-size: 10.5pt;
+    color: #166534;
+    font-weight: 700;
+}
+
+.phrase-box p {
+    margin: 0;
+    font-size: 9.5pt;
+    color: #14532d;
+    font-style: italic;
+    line-height: 1.4;
+}

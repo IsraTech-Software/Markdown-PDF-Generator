@@ -1,0 +1,431 @@
+#!/usr/bin/env python3
+import subprocess
+import os
+import sys
+import shutil
+import base64
+import fitz  # PyMuPDF
+import cv2
+import numpy as np
+from PIL import Image
+from io import BytesIO
+import uuid
+from typing import Dict, List
+import textwrap
+import getpass
+import shutil
+
+
+ # TODO your Logo as Base64. If undesired, leave empty
+LOGO_BASE64: str = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjMGQzYjY2IiByeD0iOCIvPjx0ZXh0IHg9IjMyIiB5PSI0MiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtd2VpZ2h0PSJib2xkIiBmb250LXNpemU9IjI2IiBmaWxsPSIjZmZmIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NRjwvdGV4dD48L3N2Zz4="
+
+# Details displayed on envelope front (Sender info)
+SENDER: Dict[str, str] = {
+    'name': 'Max Mustermann',
+    'address': 'Muster address lane 1',
+    'address2': 'Muster address lane 2',
+    'address3': 'Muster address lane 3',
+    'city_and_postcode': 'Muster ZIP, Mustercity',
+    'country': 'Mustercountry',
+    'phone': '00000000000'
+}
+
+# Corporate branding displayed on back of envelope
+COMPANY: Dict[str, str] = {
+    'name': 'Muster company',
+    'address': 'Muster address lane 1',
+    'address2': 'Muster address lane 2',
+    'address3': 'Muster ddress lane 3',
+    'city_and_postcode': 'Muster ZIP, Mustercity',
+    'country': 'Mustercountry',
+    'phone': '00000000000',
+    'website': 'https://isratech.software/',
+    'email': 'sales@isratech.software'
+}
+
+REFERENCE_CSS: str = textwrap.dedent("""
+    @page {
+        size: 220mm 110mm; 
+        margin: 0; 
+        background-color: #ffffff;
+    }
+
+    body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: #000000;
+        background-color: #ffffff;
+        margin: 0;
+        padding: 0;
+        font-size: 10pt;
+    }
+
+    /* Keeps the Python-injected logo strictly on the front page */
+    .logo-top-right {
+        position: absolute !important; 
+        top: 15mm !important;
+        left: 15mm !important;
+        right: auto !important;
+        width: auto !important; 
+        height: 20mm !important; 
+        z-index: 1000;
+    }
+
+    /* --- PAGE CONTAINERS --- */
+    .page-front {
+        position: relative;
+        width: 220mm;
+        height: 110mm;
+        page-break-after: always; 
+        box-sizing: border-box;
+    }
+
+    .page-back {
+        position: relative;
+        width: 220mm;
+        height: 110mm;
+        box-sizing: border-box;
+    }
+
+    /* --- PAGE 1: FRONT --- */
+    .einschreiben-block {
+        position: absolute;
+        top: 15mm;
+        right: 15mm;
+        width: 90mm;
+        text-align: right;
+    }
+
+    .einschreiben-block img {
+        max-width: 100%;
+        max-height: 30mm;
+        height: auto;
+    }
+
+    .sender-details {
+        position: absolute;
+        top: 36mm; 
+        left: 15mm;
+        line-height: 1.25;
+    }
+
+    .receiver-details {
+        position: absolute;
+        top: 50mm;
+        left: 100mm; 
+        font-size: 13pt;
+        line-height: 1.3;
+    }
+
+    .front-line {
+        position: absolute;
+        bottom: 12mm; 
+        left: 15mm;
+        width: 190mm;
+        border-bottom: 1px solid #000000;
+    }
+
+    .front-footer {
+        position: absolute;
+        bottom: 7mm;
+        left: 15mm;
+        width: 190mm;
+        text-align: center;
+        font-size: 7.5pt;
+        color: #555555;
+    }
+
+    /* --- PAGE 2: BACK --- */
+    .back-company-block {
+        position: absolute;
+        bottom: 35mm; 
+        left: 15mm;
+    }
+
+    .back-address {
+        position: relative;
+        padding-left: 32mm;
+        line-height: 1.25;
+        font-weight: 500;
+        min-height: 14mm; 
+    }
+
+    /* INJECT YOUR BASE64 STRING HERE */
+    .back-address::before {
+        content: "";
+        position: absolute;
+        left: 6mm;
+        top: 0;
+        bottom: 0;
+        margin: auto;
+        width: 20mm; 
+        height: 20mm;
+        background-image: url('data:image/png;base64,[LOGO_BASE64]'); 
+        background-size: contain;
+        background-position: left center;
+        background-repeat: no-repeat;
+    }
+
+    .back-line {
+        position: absolute;
+        bottom: 25mm;
+        left: 15mm;
+        width: 190mm;
+        border-bottom: 1px solid #000000;
+    }
+
+    .back-contact-block {
+        position: absolute;
+        bottom: 15mm;
+        left: 15mm;
+    }
+
+    .contact-item {
+        display: inline-block;
+        margin-right: 8mm; 
+        position: relative;
+        padding-left: 22px; 
+    }
+
+    .contact-item a {
+        text-decoration: none;
+        color: #000000;
+        font-weight: 600;
+        vertical-align: middle;
+        font-size: 9.5pt;
+        line-height: 16px;
+        display: inline-block;
+    }
+
+    .icon-web::before,
+    .icon-mail::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+
+    .icon-web::before {
+        position: absolute;
+        top: 2.6mm;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3Cpath d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'/%3E%3C/svg%3E");
+    }
+
+    .icon-mail::before {
+        position: absolute;
+        top: 2.6mm;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z'/%3E%3Cpolyline points='22,6 12,13 2,6'/%3E%3C/svg%3E");
+    }
+    """.replace('[LOGO_BASE64]', LOGO_BASE64))
+
+
+def get_dict_as_html(_dict: Dict[str, str], linebreaks: bool = False) -> str:
+    output = []
+    br = ', '
+    if linebreaks:
+        br = '</br>'
+    for key, val in _dict.items():
+        if key == 'website' or key == 'email':
+            continue
+        if val:
+            if key == 'phone':
+                val = f'Tel-{val}'
+            output.append(val)
+    return br.join(output)
+
+
+REFERENCE_HTML: str = textwrap.dedent(
+    """
+    <div class="page-front">
+        <img class="logo-top-right" src="[LOGO_BASE64]" alt="" />
+        <div class="einschreiben-block">
+            <img src="data:image/png;base64,[STAMP_BASE64]" alt="" />
+        </div>
+        <div class="sender-details">
+            [SENDER_DETAILS]
+        </div>
+        <div class="receiver-details">
+            Blank<br>
+            Blank<br>
+            Blank<br>
+            Blank<br>
+            Blank<br>
+            Blank<br>
+            Blank
+        </div>
+        <div class="front-line"></div>
+        <div class="front-footer">[COMPANY_DETAILS_SINGLE_LINE]</div>
+    </div>
+
+    <div class="page-back">
+        <div class="back-company-block">
+            <div class="back-address">
+                [COMPANY_DETAILS]
+            </div>
+        </div>
+        <div class="back-line"></div>
+        <div class="back-contact-block">
+            <div class="contact-item icon-web">
+                <a href="[COMPANY_WEBSITE]">[COMPANY_WEBSITE]</a>
+            </div>
+            <div class="contact-item icon-mail">
+                <a href="mailto:[COMPANY_EMAIL]">[COMPANY_EMAIL]</a>
+            </div>
+        </div>
+    </div>
+    """
+    .replace('[LOGO_BASE64]', LOGO_BASE64)
+    .replace('[SENDER_DETAILS]', get_dict_as_html(SENDER, linebreaks=True))
+    .replace('[COMPANY_DETAILS]', get_dict_as_html(COMPANY, linebreaks=True))
+    .replace('[COMPANY_DETAILS_SINGLE_LINE]', get_dict_as_html(COMPANY))
+    .replace('[COMPANY_WEBSITE]', COMPANY.get('website', ''))
+    .replace('[COMPANY_EMAIL]', COMPANY.get('email', ''))
+)
+
+
+def crop_image_by_pixels(pdf_file_path, output_image_path):
+    pdf_document = fitz.open(pdf_file_path)
+    page = pdf_document[0]
+    
+    dpi = 600
+    image = page.get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72))
+    
+    pil_image = Image.frombytes("RGB", [image.width, image.height], image.samples)
+    gray_image = np.array(pil_image.convert("L"))
+    _, binary_mask = cv2.threshold(gray_image, 1, 255, cv2.THRESH_BINARY)
+    
+    top, bottom, left, right = None, None, None, None
+    
+    for i in range(binary_mask.shape[0]):
+        if np.any(binary_mask[i, :] == 0):
+            top = i
+            break
+            
+    for i in range(binary_mask.shape[0] - 1, -1, -1):
+        if np.any(binary_mask[i, :] == 0):
+            bottom = i
+            break
+            
+    for i in range(binary_mask.shape[1]):
+        if np.any(binary_mask[:, i] == 0):
+            left = i
+            break
+            
+    for i in range(binary_mask.shape[1] - 1, -1, -1):
+        if np.any(binary_mask[:, i] == 0):
+            right = i
+            break
+            
+    if top is not None and bottom is not None and left is not None and right is not None:
+        cropped_image = gray_image[top+60:bottom-60, left+60:right-60]
+        cv2.imwrite(output_image_path, cropped_image)
+        print(f'Saved cropped image as {output_image_path}')
+    else:
+        print('No outer black markers found.')
+
+
+def _get_details():
+    prompts = [
+        'Enter Receiver Name: ',
+        'Enter Receiver Address: ',
+        'Enter Receiver Secondary Address (Optional): ',
+        'Enter Receiver Tertiary Address (Optional): ',
+        'Enter Receiver Postal Code and City: ',
+        'Enter Receiver Country (Optional): '
+    ]
+    print("\n=== Paste multi-line address and/or CTRL+D to skip ===\n")
+    raw_lines = sys.stdin.read().splitlines()
+    pasted_data = [line.strip() for line in raw_lines if line.strip()]
+    
+    details = []
+    for i, prompt in enumerate(prompts):
+        # 2. If we already have a pasted line for this prompt index, use it silently
+        if i < len(pasted_data):
+            details.append(pasted_data[i])
+            continue
+            
+        # 3. Otherwise, if the paste ran out, fallback to normal input
+        val = input(prompt).strip()
+        if val:
+            details.append(val)
+            
+    phone = input('Enter Receiver Phone Number (Optional): ').replace(' ', '')
+    if phone:
+        details.append('Tel-' + phone)
+        
+    return [d for d in details if d]
+
+
+def _replace_blanks(valid_details: List[str]) -> str:
+    global REFERENCE_HTML
+    content: str = REFERENCE_HTML
+    for i in range(7): # 7 Blanks in the template
+        if i < len(valid_details):
+            content = content.replace('Blank', valid_details[i], 1)
+        else:
+            content = content.replace('Blank<br>\n', '', 1)
+            content = content.replace('Blank<br>', '', 1)
+            content = content.replace('Blank\n', '', 1)
+            content = content.replace('Blank', '', 1)
+    return content
+
+
+def _get_stamp_base64(pdf_path: str, stamp_img: str) -> str:
+    b64_stamp: str = ''
+    if pdf_path and os.path.exists(pdf_path):
+        print("\n--- Processing Stamp ---")
+        crop_image_by_pixels(pdf_path, stamp_img)
+        with open(stamp_img, "rb") as img_file:
+            b64_stamp = base64.b64encode(img_file.read()).decode('utf-8')
+    else:
+        print("\n--- No stamp provided. Generating blank placeholder ---")
+        blank_img = Image.new('RGB', (1, 1), color='white')
+        buffer = BytesIO()
+        blank_img.save(buffer, format="PNG")
+        b64_stamp = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    return b64_stamp
+
+
+def main():
+    if not shutil.which("topdf"):
+        print("Error: topdf not found")
+        exit(1)
+    stamp_img: str = 'stamp.png'
+    pdf_path = sys.argv[1] if len(sys.argv) > 1 else None
+    try:
+    	details: List[str] = _get_details()
+    except KeyboardInterrupt:
+    	exit()
+    b64_stamp: str = _get_stamp_base64(pdf_path=pdf_path, stamp_img=stamp_img)
+    content: str = _replace_blanks(valid_details=details).replace('[STAMP_BASE64]', b64_stamp)
+
+    temp_name: str = uuid.uuid4().hex
+    working_md: str = f'{temp_name}.md'
+    working_css: str = f'{temp_name}.css'
+
+    with open(working_md, 'w+', encoding='utf-8') as f:
+        f.write(content)
+    with open(working_css, 'w+', encoding='utf-8') as f:
+        f.write(REFERENCE_CSS)
+
+    print("\nGenerating PDF...")
+    cmd = f'topdf -i {working_md} -o output.pdf -s "{working_css}"'
+    subprocess.run(cmd, shell=True)
+
+    if os.path.exists(stamp_img):
+        os.remove(stamp_img)
+    if os.path.exists(working_md):
+        os.remove(working_md)
+    if os.path.exists(working_css):
+        os.remove(working_css)
+
+    print("\nDone! Envelope saved as output.pdf")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,45 @@
+name: CI/CD Pipeline
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check for document changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs_changed:
+              - 'README.md'
+              - '.github/assets/logo.png'
+              - '.github/assets/styles.css'
+
+      - name: Convert README to PDF
+        if: steps.filter.outputs.docs_changed == 'true'
+        uses: Isratech-Software/markdown-to-pdf-action@v1
+        with:
+          input_file: 'README.md'
+          output_file: 'docs/README.pdf'
+          logo_file: '.github/assets/logo.png'
+          css_file: '.github/assets/styles.css'
+
+      - name: Commit Generated PDF
+        if: steps.filter.outputs.docs_changed == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f docs/README.pdf
+          git commit -m "docs: auto-generate PDF from README"
+          git push
