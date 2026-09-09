@@ -35,6 +35,7 @@ import urllib.request
 import markdown
 import base64
 import ssl
+import pypdf
 
 from pygments.formatters import HtmlFormatter
 from weasyprint import HTML
@@ -67,6 +68,33 @@ def _get_md_text(input_file) -> str:
 def _apply_page_breaks(md_text: str) -> str:
     md_text = md_text.replace(r'\newpage', '<div style="page-break-before: always;"></div>')
     return md_text.replace(r'\n', '<br/>')
+
+def _clean_markdown_for_ai(md_text: str) -> str:
+    """Removes image references, base64 strings, HTML tags, newlines, page breaks, and math symbols for clean AI indexing."""
+    # Remove \newpage directive
+    clean_text = md_text.replace(r'\newpage', ' ')
+    # Remove math blocks ($$ ... $$ and $ ... $)
+    clean_text = re.sub(r'\$\$[\s\S]*?\$\$', ' ', clean_text)
+    clean_text = re.sub(r'\$[^\$\n]+?\$', ' ', clean_text)
+    # Remove all HTML tags
+    clean_text = re.sub(r'<[^>]+>', ' ', clean_text)
+    # Remove markdown images like ![alt](path)
+    clean_text = re.sub(r'!\[.*?\]\(.*?\)', ' ', clean_text)
+    # Strip newlines and carriage returns
+    clean_text = cleaned = clean_text.replace('\n', ' ').replace('\r', ' ')
+    # Collapse multiple spaces
+    clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+    return clean_text
+
+def _sanitize_attr(text: str) -> str:
+    """Safely escapes quotes and special characters for HTML attribute injection."""
+    return text.replace('"', '&quot;').replace("'", '&#39;')
+
+def _generate_ai_hidden_layer(md_text: str) -> str:
+    """Wraps the cleaned markdown text into the off-screen AI hidden layer."""
+    cleaned = _clean_markdown_for_ai(md_text)
+    print('Injecting hidden metadata for AI...')
+    return f'<div class="ai-hidden-layer">RESUME_AI_SEARCH_INDEX: {cleaned}</div>'
 
 
 def _fetch_math_base64(math_str: str) -> str:
@@ -125,6 +153,17 @@ def _get_css() -> str:
             padding: 15mm 15mm;
             font-size: 10.5pt;
             line-height: 1.6;
+        }
+
+        /* --- AI Hidden Layer Styles --- */
+        .ai-hidden-layer {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            font-size: 1pt;
         }
 
         /* --- ADDITION 3: Base64 Logo --- */
@@ -243,30 +282,63 @@ def _get_css() -> str:
     """
 
 
-def _generate_html_output(custom_css: str, pygments_css: str, logo_html: str, html_body: str) -> str:
+def _extract_metadata_from_markdown(md_text: str) -> dict:
+    """Dynamically parses the markdown text to extract and sanitize metadata fields."""
+    metadata = {
+        "title": "Curriculum Vitae",
+        "description": "Professional Curriculum Vitae and Experience Record",
+        "keywords": "Resume, CV, Professional Experience"
+    }
+    
+    # 1. Extract Title (First Markdown # heading)
+    title_match = re.search(r'^\s*#\s+(.+)$', md_text, re.MULTILINE)
+    if title_match:
+        raw_title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip()
+        metadata["title"] = _sanitize_attr(raw_title)
+        
+    # 2. Clean text for description and keywords generation
+    cleaned = _clean_markdown_for_ai(md_text)
+    if cleaned:
+        desc_snippet = cleaned[:160] + "..." if len(cleaned) > 160 else cleaned
+        metadata["description"] = _sanitize_attr(desc_snippet)
+        
+        # Pull unique words for meta keywords
+        words = [w.strip(".,()[]{}:;") for w in cleaned.split() if len(w) > 4]
+        unique_keywords = sorted(list(set(words)), key=words.index)[:15]
+        metadata["keywords"] = _sanitize_attr(", ".join(unique_keywords))
+        
+    return metadata
+
+
+def _generate_html_output(custom_css: str, pygments_css: str, logo_html: str, html_body: str, ai_hidden_html: str, metadata: dict) -> str:
     return f"""
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
+        <title>{metadata['title']}</title>
+        <meta name="author" content="{metadata['title']}">
+        <meta name="description" content="{metadata['description']}">
+        <meta name="keywords" content="{metadata['keywords']}">
         <style>
             {custom_css}
             {pygments_css}
         </style>
     </head>
-
     <body>
         {logo_html}
         {html_body}
+        {ai_hidden_html}
     </body>
     </html>
     """
 
 
-def _render_pdf(html: str, input_file_path: str, output_file_path: str) -> None:
+def _render_pdf(html: str, input_file_path: str, output_file_path: str, enable_metadata: bool) -> None:
     print(f"Converting '{input_file_path}' to '{output_file_path}'...")
     base_dir = os.path.abspath(os.path.dirname(input_file_path))
-    HTML(string=html, base_url=base_dir).write_pdf(output_file_path)
+    # Pass custom_metadata flag dynamically depending on the CLI option
+    HTML(string=html, base_url=base_dir).write_pdf(output_file_path, custom_metadata=enable_metadata)
     print("PDF generated successfully.")
 
 
@@ -277,23 +349,37 @@ def _apply_table_alignment(html_body: str) -> str:
     return re.sub(right_pattern, r'<td style="text-align: right;">\1</td>', html_body, flags=re.DOTALL)
 
 
-def convert_md_to_pdf(input_file, output_file, logo, css) -> None:
+def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> None:
     """
     Converts the given markdown file to pdf.
     :param input_file: Markdown input file path.
     :param output_file: PDF output file path.
     :param logo: (Optional) Path to image file to include as logo.
     :param css: (Optional) Custom css stylesheet.
-    :return:
+    :param extract_metadata: (Boolean) Whether to dynamically parse metadata from markdown.
     """
     _ensure_exists(input_file=input_file)
     
     md_text = _get_md_text(input_file=input_file)
-    md_text = _apply_page_breaks(md_text=md_text)
-    md_text = _apply_mathjax(md_text=md_text)
+    
+    # Conditionally extract metadata or keep default fallbacks
+    if extract_metadata:
+        metadata = _extract_metadata_from_markdown(md_text)
+    else:
+        metadata = {
+            "title": "Curriculum Vitae",
+            "description": "Professional Curriculum Vitae and Experience Record",
+            "keywords": "Resume, CV, Professional Experience"
+        }
+        
+    ai_hidden_html = _generate_ai_hidden_layer(md_text)
+    
+    # Process regular markdown content
+    processed_md = _apply_page_breaks(md_text=md_text)
+    processed_md = _apply_mathjax(md_text=processed_md)
     
     extensions: List[str] = ['fenced_code', 'codehilite', 'tables', 'sane_lists', 'attr_list']
-    html_body: str = _to_html(md_text=md_text, extensions=extensions)
+    html_body: str = _to_html(md_text=processed_md, extensions=extensions)
     html_body = _apply_table_alignment(html_body)
     
     pygments_css: str = HtmlFormatter(style='default').get_style_defs('.codehilite')
@@ -307,13 +393,16 @@ def convert_md_to_pdf(input_file, output_file, logo, css) -> None:
         custom_css=custom_css,
         pygments_css=pygments_css,
         logo_html=logo_html,
-        html_body=html_body
+        html_body=html_body,
+        ai_hidden_html=ai_hidden_html,
+        metadata=metadata
     )
 
     _render_pdf(
         html=full_html,
         input_file_path=input_file,
-        output_file_path=output_file
+        output_file_path=output_file,
+        enable_metadata=extract_metadata
     )
     
 
@@ -323,9 +412,10 @@ def main():
     parser.add_argument('-o', '--output', required=True, help="Path to the output PDF file (.pdf)")
     parser.add_argument('-l', '--logo', required=False, help="Path to the custom logo image file.")
     parser.add_argument('-s', '--css', required=False, help="Path to the custom CSS stylesheet.")
+    parser.add_argument('-m', '--metadata', action='store_true', help="Dynamically extract title, description, and keywords from the markdown text into PDF metadata.")
 
     args = parser.parse_args()
-    convert_md_to_pdf(args.input, args.output, args.logo, args.css)
+    convert_md_to_pdf(args.input, args.output, args.logo, args.css, args.metadata)
 
 if __name__ == "__main__":
     main()
