@@ -11,7 +11,8 @@ This is the standalone CLI version of the [`markdown-to-pdf-action`](https://git
     Install required python dependencies:
     <pre style="white-space: pre-wrap; overflow-wrap: break-word; overflow-x: clip;"><code class="language-bash">markdown
 pygments
-weasyprint</code></pre>
+weasyprint
+pypdf</code></pre>
     <blockquote>
       <p>Note if running on MacOS, <code>pango</code> is also required: <code>brew install pango</code></p>
     </blockquote>
@@ -48,6 +49,16 @@ To use a custom css file, pass it as an argument:
 
 ```bash
 topdf -i README.md -o output.pdf -l logo.png -s styles.css
+```
+
+### Metadata and Hidden Metadata for AI Screening Tools
+
+The tool now also includes a `-m / --metadata` tag that allows embedding the entirety of the document's text as a string within the rendered pdf for AI-Screening-Tools. The text is placed off screen and never rendered in actual PDF-Viewers, but is very much parseable by AI.
+
+Furthermore, the tool attempts to extract metadata from the text and appends it as normal PDF-Metadata (Title / Description and Author). 
+
+```bash
+topdf -i README.md -o output.pdf [-l logo.png] [-s styles.css] [-m] [--metadata]
 ```
 
 ## Demo
