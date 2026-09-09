@@ -58,8 +58,16 @@ The tool now also includes a `-m / --metadata` tag that allows embedding the ent
 Furthermore, the tool attempts to extract metadata from the text and appends it as normal PDF-Metadata (Title / Description and Author). 
 
 ```bash
-topdf -i README.md -o output.pdf [-l logo.png] [-s styles.css] [-m] [--metadata]
+topdf -i README.md -o output.pdf [-l logo.png] [-s styles.css] [-m]
 ```
+
+Furthermore, the tool allows the use of the `-j / --job [job_description_file.md]` parameter to further append relevant metadata as keywords. This can be used alongside the `--metadata` parameter:
+
+```bash
+topdf -i README.md -o output.pdf [-l logo.png] [-s styles.css] [-m] [-j job.md]
+```
+
+> Responsible use of the metadata parameters is up to the user.
 
 ## Demo
 

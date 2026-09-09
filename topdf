@@ -19,14 +19,10 @@ import os
 import sys
 
 # --- MAC ARM64 FIX ---
-# We inject the Homebrew path directly into the process environment 
-# BEFORE importing weasyprint.
 if sys.platform == "darwin":
     homebrew_lib = "/opt/homebrew/lib"
     if os.path.exists(homebrew_lib):
-        # 1. Update the DLL search path for cffi
         os.environ["DYLD_LIBRARY_PATH"] = f"{homebrew_lib}:{os.environ.get('DYLD_LIBRARY_PATH', '')}"
-        # 2. Add to PATH just in case
         os.environ["PATH"] = f"{homebrew_lib}:{os.environ.get('PATH', '')}"
 
 import re
@@ -69,10 +65,13 @@ def _apply_page_breaks(md_text: str) -> str:
     md_text = md_text.replace(r'\newpage', '<div style="page-break-before: always;"></div>')
     return md_text.replace(r'\n', '<br/>')
 
+
 def _clean_markdown_for_ai(md_text: str) -> str:
-    """Removes image references, base64 strings, HTML tags, newlines, page breaks, and math symbols for clean AI indexing."""
+    """Removes HTML comments, image references, base64 strings, HTML tags, newlines, page breaks, and math symbols for clean AI indexing."""
+    # Remove HTML comments (e.g., <!-- secret -->) to prevent secret leaks
+    clean_text = re.sub(r'<!--[\s\S]*?-->', ' ', md_text)
     # Remove \newpage directive
-    clean_text = md_text.replace(r'\newpage', ' ')
+    clean_text = clean_text.replace(r'\newpage', ' ')
     # Remove math blocks ($$ ... $$ and $ ... $)
     clean_text = re.sub(r'\$\$[\s\S]*?\$\$', ' ', clean_text)
     clean_text = re.sub(r'\$[^\$\n]+?\$', ' ', clean_text)
@@ -81,20 +80,25 @@ def _clean_markdown_for_ai(md_text: str) -> str:
     # Remove markdown images like ![alt](path)
     clean_text = re.sub(r'!\[.*?\]\(.*?\)', ' ', clean_text)
     # Strip newlines and carriage returns
-    clean_text = cleaned = clean_text.replace('\n', ' ').replace('\r', ' ')
+    clean_text = clean_text.replace('\n', ' ').replace('\r', ' ')
     # Collapse multiple spaces
     clean_text = re.sub(r'\s+', ' ', clean_text).strip()
     return clean_text
+
 
 def _sanitize_attr(text: str) -> str:
     """Safely escapes quotes and special characters for HTML attribute injection."""
     return text.replace('"', '&quot;').replace("'", '&#39;')
 
-def _generate_ai_hidden_layer(md_text: str) -> str:
-    """Wraps the cleaned markdown text into the off-screen AI hidden layer."""
-    cleaned = _clean_markdown_for_ai(md_text)
-    print('Injecting hidden metadata for AI...')
-    return f'<div class="ai-hidden-layer">RESUME_AI_SEARCH_INDEX: {cleaned}</div>'
+
+def _generate_ai_hidden_layer(md_text: str, job_text: str = "") -> str:
+    """Wraps the cleaned markdown and optional job description text into the off-screen AI hidden layer."""
+    cleaned_md = _clean_markdown_for_ai(md_text)
+    cleaned_job = _clean_markdown_for_ai(job_text) if job_text else ""
+    
+    combined = f"{cleaned_md} {cleaned_job}".strip()
+    print('Injecting hidden metadata and job description for AI...')
+    return f'<div class="ai-hidden-layer">RESUME_AI_SEARCH_INDEX: {combined}</div>'
 
 
 def _fetch_math_base64(math_str: str) -> str:
@@ -135,9 +139,8 @@ def _get_css() -> str:
         @page {
             size: A4;
             margin: 15mm 15mm;
-            background-color: #f0f4f8; /* Grey background outside the paper */
+            background-color: #f0f4f8;
             
-            /* --- ADDITION 4: Page Numbers --- */
             @bottom-right {
                 content: "Page " counter(page) " of " counter(pages);
                 font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -149,13 +152,12 @@ def _get_css() -> str:
         body {
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #2c3e50;
-            background-color: #ffffff; /* White paper background */
+            background-color: #ffffff;
             padding: 15mm 15mm;
             font-size: 10.5pt;
             line-height: 1.6;
         }
 
-        /* --- AI Hidden Layer Styles --- */
         .ai-hidden-layer {
             position: absolute;
             left: -9999px;
@@ -166,13 +168,11 @@ def _get_css() -> str:
             font-size: 1pt;
         }
 
-        /* --- ADDITION 3: Base64 Logo --- */
-        /* position: fixed makes it repeat on every page in WeasyPrint */
         .logo-top-right {
             position: fixed;
-            top: -15mm;      /* Pushes it UP 20mm into the 25mm top grey margin */
-            right: 0mm;    /* Pushes it RIGHT 12mm into the 15mm right grey margin */
-            width: 64px;     /* Kept slightly smaller than 15mm to avoid clipping */
+            top: -15mm;
+            right: 0mm;
+            width: 64px;
             height: 64px;
             z-index: 1000;
         }
@@ -192,7 +192,7 @@ def _get_css() -> str:
             border-left: 5px solid #ee964b; 
             padding-left: 10px;
             page-break-after: avoid;
-            background-color: #fafbfc;      
+            background-color: #fafbfc;     
             padding-top: 5px;
             padding-bottom: 5px;
         }
@@ -283,7 +283,7 @@ def _get_css() -> str:
 
 
 def _extract_metadata_from_markdown(md_text: str) -> dict:
-    """Dynamically parses the markdown text to extract and sanitize metadata fields."""
+    """Dynamically parses the markdown text to extract and sanitize metadata fields, ignoring comments."""
     metadata = {
         "title": "Curriculum Vitae",
         "description": "Professional Curriculum Vitae and Experience Record",
@@ -296,7 +296,7 @@ def _extract_metadata_from_markdown(md_text: str) -> dict:
         raw_title = re.sub(r'<[^>]+>', '', title_match.group(1)).strip()
         metadata["title"] = _sanitize_attr(raw_title)
         
-    # 2. Clean text for description and keywords generation
+    # 2. Clean text for description and keywords generation (stripping comments automatically via _clean_markdown_for_ai)
     cleaned = _clean_markdown_for_ai(md_text)
     if cleaned:
         desc_snippet = cleaned[:160] + "..." if len(cleaned) > 160 else cleaned
@@ -337,7 +337,6 @@ def _generate_html_output(custom_css: str, pygments_css: str, logo_html: str, ht
 def _render_pdf(html: str, input_file_path: str, output_file_path: str, enable_metadata: bool) -> None:
     print(f"Converting '{input_file_path}' to '{output_file_path}'...")
     base_dir = os.path.abspath(os.path.dirname(input_file_path))
-    # Pass custom_metadata flag dynamically depending on the CLI option
     HTML(string=html, base_url=base_dir).write_pdf(output_file_path, custom_metadata=enable_metadata)
     print("PDF generated successfully.")
 
@@ -349,7 +348,7 @@ def _apply_table_alignment(html_body: str) -> str:
     return re.sub(right_pattern, r'<td style="text-align: right;">\1</td>', html_body, flags=re.DOTALL)
 
 
-def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> None:
+def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata, job_file) -> None:
     """
     Converts the given markdown file to pdf.
     :param input_file: Markdown input file path.
@@ -357,11 +356,17 @@ def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> N
     :param logo: (Optional) Path to image file to include as logo.
     :param css: (Optional) Custom css stylesheet.
     :param extract_metadata: (Boolean) Whether to dynamically parse metadata from markdown.
+    :param job_file: (Optional) Path to job description text/markdown file.
     """
     _ensure_exists(input_file=input_file)
     
     md_text = _get_md_text(input_file=input_file)
     
+    job_text = ""
+    if job_file:
+        _ensure_exists(job_file)
+        job_text = _get_md_text(job_file)
+
     # Conditionally extract metadata or keep default fallbacks
     if extract_metadata:
         metadata = _extract_metadata_from_markdown(md_text)
@@ -372,7 +377,7 @@ def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> N
             "keywords": "Resume, CV, Professional Experience"
         }
         
-    ai_hidden_html = _generate_ai_hidden_layer(md_text)
+    ai_hidden_html = _generate_ai_hidden_layer(md_text, job_text)
     
     # Process regular markdown content
     processed_md = _apply_page_breaks(md_text=md_text)
@@ -386,7 +391,7 @@ def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> N
     custom_css: str = _get_css()
     if css:
         custom_css = _get_md_text(input_file=css)
-    
+        
     logo_html: str = _get_logo_html(logo)
 
     full_html = _generate_html_output(
@@ -404,7 +409,7 @@ def convert_md_to_pdf(input_file, output_file, logo, css, extract_metadata) -> N
         output_file_path=output_file,
         enable_metadata=extract_metadata
     )
-    
+
 
 def main():
     parser = argparse.ArgumentParser(description="Convert Markdown to a beautifully styled PDF.")
@@ -412,10 +417,12 @@ def main():
     parser.add_argument('-o', '--output', required=True, help="Path to the output PDF file (.pdf)")
     parser.add_argument('-l', '--logo', required=False, help="Path to the custom logo image file.")
     parser.add_argument('-s', '--css', required=False, help="Path to the custom CSS stylesheet.")
+    parser.add_argument('-j', '--job', required=False, help="Path to a job description file to embed keywords and text into the hidden AI layer.")
     parser.add_argument('-m', '--metadata', action='store_true', help="Dynamically extract title, description, and keywords from the markdown text into PDF metadata.")
 
     args = parser.parse_args()
-    convert_md_to_pdf(args.input, args.output, args.logo, args.css, args.metadata)
+    convert_md_to_pdf(args.input, args.output, args.logo, args.css, args.metadata, args.job)
+
 
 if __name__ == "__main__":
     main()
