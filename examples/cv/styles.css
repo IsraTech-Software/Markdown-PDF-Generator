@@ -1,0 +1,363 @@
+/* =========================================================================
+   styles.css — Refactored CV Theme
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&family=Arimo:wght@400;500;600;700&display=swap');
+
+@page {
+    size: A4;
+    margin: 15mm 15mm 15mm 15mm;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arimo', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #2b2b2b;
+    padding: 0;
+}
+
+hr {
+    margin-top: 1mm;
+    margin-bottom: 1mm;
+    height: 2px;
+    border: none;
+    background-color: #cccccc;
+    border-radius: 1px;
+}
+
+/* ---------- Header Container (Gray Box) ---------- */
+.header-box {
+    background-color: #efefef;
+    border-radius: 0 8px 8px 0; 
+    padding: 12mm 12mm 6mm 18mm;
+    margin: -8mm -15px 10mm -18mm; 
+    position: relative;
+}
+
+.header-box h1 {
+    display: inline-block;
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 20pt;
+    font-weight: 100;
+    color: #ffffff;
+    background-color: #2a4c73;
+    margin: -6mm 0 0mm -25mm; 
+    padding: 6px 30px 6px 40mm; 
+    border-radius: 0 4px 4px 0;
+}
+
+.header-box table {
+    border-collapse: collapse;
+    width: 70%;
+    margin: 0 0 0 15mm; 
+    position: relative;
+    top: -25mm;
+    margin-bottom: -24mm; 
+}
+
+.header-box img {
+    float: right;
+    width: 38mm;
+    height: 38mm;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-top: -2mm;
+}
+
+.header-box table td {
+    padding: 0.1mm 0; 
+    line-height: 1.25; 
+    font-size: 9.5pt;
+    vertical-align: top;
+}
+
+.header-box table td:first-child {
+    color: #555555;
+    width: 35mm;
+    white-space: nowrap;
+}
+
+.header-box table a {
+    color: #2b2b2b;
+    text-decoration: none;
+}
+
+/* ---------- Section Headings ---------- */
+h2 {
+    clear: both;
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 16pt;
+    font-weight: 700;
+    color: #2b2b2b;
+    margin-top: 6mm;
+    margin-bottom: 6mm;
+    page-break-after: avoid;
+}
+
+/* ---------- Work Experience (Grid Layout) ---------- */
+.cv-entry {
+    clear: both;
+    margin-bottom: 2mm;
+    margin-left: 5mm;
+    break-inside: auto; 
+    page-break-inside: auto;
+    overflow: hidden;
+}
+
+.cv-content h3 {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    margin: 0 0 1mm 0;
+    color: #2b2b2b;
+    break-after: avoid;
+    page-break-after: avoid;
+}
+
+.cv-sub-entry {
+    clear: both;
+    margin-top: 3mm;
+    margin-bottom: 2mm;
+    padding-left: 4mm;
+    border-left: 1.5px solid #d3d3d3;
+    break-inside: auto; 
+    page-break-inside: auto;
+    overflow: hidden;
+}
+
+.cv-date {
+    float: left;
+    width: 34mm;
+    font-size: 9.5pt;
+    font-weight: 400;
+    color: #000;
+}
+
+.cv-content {
+    margin-left: 34mm;
+    margin-right: 10px;
+    break-inside: auto;
+    page-break-inside: auto;
+}
+
+.cv-content .subtitle {
+    font-size: 9.5pt;
+    color: #2b2b2b;
+    margin-bottom: 2mm;
+}
+
+.cv-content .reference {
+    font-size: 8.5pt;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 2mm;
+}
+
+.cv-content .reference a {
+    font-size: 8.5pt;
+    color: #666;
+    font-style: italic;
+    margin-bottom: 2mm;
+}
+
+.cv-sub-date {
+    display: block;
+    font-size: 9pt;
+    color: #555;
+    margin-bottom: 0.5mm;
+}
+
+.cv-sub-content {
+    margin-left: 4mm;
+    break-inside: auto;
+    page-break-inside: auto;
+}
+
+.cv-sub-content h4 {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: 700;
+    margin: 0 0 1mm 0;
+    color: #2b2b2b;
+}
+
+.cv-sub-content h4 .reference {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 8.5pt;
+    font-weight: 200;
+    margin: 0 0 1mm 0;
+}
+
+/* ---------- Inline Tech Stack for NDA Sub-Entries ---------- */
+.cv-sub-sub-content ul {
+    gap: 2mm 6mm;
+    margin-top: 1mm;
+}
+
+.cv-sub-sub-content ul li {
+    padding-left: 0;
+    margin-bottom: 0;
+    font-size: 8.5pt;
+    font-weight: 200;
+}
+
+.cv-sub-sub-content ul li::before {
+    content: none; /* Removes the default bullet dot for a clean metadata tag look */
+}
+
+/* ---------- Nested Sub-Sub Entries ---------- */
+.cv-sub-sub-entry {
+    clear: both;
+    margin-top: 3mm;
+    margin-bottom: 2mm;
+    padding-left: 3mm;
+    border-left: 1px solid #e0e0e0;
+    break-inside: auto; 
+    page-break-inside: auto;
+}
+
+.cv-sub-sub-content {
+    margin-left: 4mm;
+    width: 100%;
+    break-inside: auto;
+    page-break-inside: auto;
+}
+
+.cv-sub-sub-date {
+    display: block;
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 0.5mm;
+}
+
+.cv-sub-sub-content h4 {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 9pt;
+    font-weight: 700;
+    margin: 0 0 1mm 0;
+    color: #2b2b2b;
+}
+
+/* ---------- Bullet Lists ---------- */
+ul {
+    margin: 0 0 2.5mm 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+ul li {
+    position: relative;
+    padding-left: 4mm;
+    margin-bottom: 1mm;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+ul li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 1.2mm;
+    height: 1.2mm;
+    background-color: #2b2b2b;
+}
+
+/* ---------- Two-column lists (Skills / Languages) ---------- */
+h2 + ul {
+    column-count: 2;
+    column-gap: 12mm;
+    list-style: none;
+    padding-left: 0;
+}
+
+h2 + ul li {
+    margin-bottom: 1.2mm;
+    font-size: 9.5pt;
+    break-inside: avoid;
+    padding-left: 0;
+}
+
+h2 + ul li::before {
+    content: none;
+}
+
+a { color: #2b2b2b; text-decoration: none; }
+strong { font-weight: 600; }
+
+/* ---------- True Center Grid for Skills / Languages ---------- */
+.cv-skills-container {
+    width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 6mm;
+    text-align: center;
+}
+
+.cv-skills-table {
+    display: inline-table;
+    width: 80%;
+    margin: 0 auto;
+    border-collapse: collapse;
+    text-align: left;
+    break-inside: auto;
+    page-break-inside: auto;
+}
+
+.cv-skills-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.cv-skills-table td {
+    width: 50%;
+    padding: 1.5mm 10mm 2.5mm 10mm;
+    vertical-align: top;
+}
+
+.cv-skills-table .skill-name {
+    font-family: 'Open Sans', Arial, sans-serif;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #2b2b2b;
+}
+
+.cv-skills-table .skill-level {
+    font-size: 8.5pt;
+    color: #666666;
+    font-style: italic;
+    margin-top: 0.5mm;
+}
+
+/* AI-Optimized Hidden Text Layer */
+.ai-hidden-layer {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    font-size: 1pt; /* Keeps text layer compact in PDF stream */
+}
+
+/* This is a removable watermark. */
+.watermark {
+    position: absolute;
+    top: 270mm; 
+    left: 0;
+    font-size: 10px !important;
+    color: #999999;
+    font-family: 'Courier New', Courier, monospace;
+    text-align: right;
+    letter-spacing: 0.5px;
+    margin: 0; 
+    padding: 0;
+}
